@@ -1,0 +1,9 @@
+# AWS Inventory Output
+aws_inventory/
+cloudmapper/
+*.json
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
