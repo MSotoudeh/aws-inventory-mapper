@@ -1,103 +1,83 @@
 # AWS Inventory Mapper
 
-## Overview
+Small read-only scripts that dump a snapshot of the main resources of an AWS account to JSON files, so you can see what is there before you change anything.
 
-**AWS Inventory Mapper** is a public repository for a fully interactive and automated AWS inventory collection solution. This project helps DevOps engineers, cloud architects, or anyone managing complex AWS accounts to quickly map their cloud environment. The scripts collect key resources and optionally visualize network and service architecture using [CloudMapper](https://github.com/duo-labs/cloudmapper).
+## Status
 
-### Problem Statement
+**Active, early stage.** The core collector works for nine resource types. Two interactive options (detailed Lambda configuration, CloudMapper launch) are placeholders that are not implemented yet; see [docs/HISTORY.md](docs/HISTORY.md).
 
-In large or legacy AWS accounts, it is often difficult to understand the architecture due to missing documentation. This causes risk when making changes, as there may be hidden dependencies, unknown network flows, or misconfigured security groups.
+## What it does
 
-**Pain Points:**
-- No existing documentation of VPCs, subnets, or network routes.
-- Unknown Lambda functions, ECS tasks, and RDS instances.
-- Lack of visibility into ECR repositories or Load Balancers.
-- Risky changes without a clear architecture map.
+Asks for an AWS CLI profile, then runs read-only AWS CLI `describe`/`list` calls and writes one JSON file per resource type into `aws_inventory/`:
 
-### Solution
+| File | AWS CLI call |
+| --- | --- |
+| `ec2_instances.json` | `ec2 describe-instances` |
+| `vpcs.json` | `ec2 describe-vpcs` |
+| `subnets.json` | `ec2 describe-subnets` |
+| `security_groups.json` | `ec2 describe-security-groups` |
+| `rds_instances.json` | `rds describe-db-instances` |
+| `lambda_functions.json` | `lambda list-functions` |
+| `s3_buckets.json` | `s3api list-buckets` |
+| `iam_users.json` | `iam list-users` |
+| `load_balancers.json` | `elbv2 describe-load-balancers` |
 
-This repository provides:
+Only the default region of the chosen profile is queried. Nothing is modified in the account. The output is account data: it is git-ignored, keep it out of public places.
 
-1. **Bash and PowerShell scripts** for collecting AWS inventory in one step.
-2. **Interactive prompts** for selecting AWS profile, optionally fetching Lambda configuration, and running CloudMapper visualization.
-3. **Output JSON files** for all major AWS services:
-   - EC2, Security Groups, Network Interfaces
-   - Lambda functions (+ optional config)
-   - ECS clusters and tasks
-   - RDS instances and subnet groups
-   - ECR repositories and images
-   - Load Balancers, Listeners, Target Groups
-   - VPC, Route Tables, NAT/Internet Gateways, Network ACLs
-4. **Optional CloudMapper visualization** for network and service architecture.
-5. **Cross-platform support**: Linux/macOS/WSL (Bash) and Windows (PowerShell + one-click .bat wrapper).
+## How it works
 
-### Key Benefits
+Two equivalent scripts (Bash and PowerShell) share one flow: choose profile, check that `aws` is installed, loop over a list of (label, CLI command, output file). `scripts/run-collect.bat` is a double-click wrapper for the PowerShell script on Windows. The output can then be fed to tools such as [CloudMapper](https://github.com/duo-labs/cloudmapper) or used for manual diagrams.
 
-- Quickly gain **full visibility** into AWS account architecture.
-- Avoid manual and error-prone documentation efforts.
-- **Safe, read-only execution** — scripts do not modify any resources.
-- Output files can be used for:
-  - CloudMapper visualization
-  - diagrams.net manual diagrams
-  - internal documentation or audits
+Not implemented yet (the scripts print prompts or contain commented-out code only): per-function Lambda configuration, CloudMapper launch, ECS, ECR, route tables, gateways, network ACLs, multi-region and multi-account collection.
 
----
+## Quick start
 
-## Installation
+Prerequisite: [AWS CLI](https://aws.amazon.com/cli/) configured with a profile that has read-only access.
 
-### Prerequisites
+Bash (Linux, macOS, WSL, Git Bash):
 
-- AWS CLI installed and configured with read-only access.
-- Python 3.x installed.
-- CloudMapper cloned and dependencies installed:
 ```bash
-git clone https://github.com/duo-labs/cloudmapper.git
-cd cloudmapper
-pip install -r requirements.txt
+chmod +x scripts/collect-aws-inventory.sh
+./scripts/collect-aws-inventory.sh
 ```
 
-## Usage
+PowerShell (Windows):
 
-### Bash (Linux/macOS/WSL)
-```bash
-chmod +x collect_aws_inventory.sh
-./collect_aws_inventory.sh
-```
-
-### PowerShell (Windows)
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\Collect-AwsInventory.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\collect-aws-inventory.ps1
 ```
 
-### One-click Windows
-Double-click `run_collect.bat` to start the PowerShell script with default settings.
+Windows one-click: double-click `scripts\run-collect.bat`.
 
-### Interactive Features
-- **AWS Profile selection**: Choose which profile to use or default.
-- **Lambda configuration**: Optional per-function fetch with estimated runtime warning.
-- **CloudMapper visualization**: Optional execution to generate web-based architecture map.
+Results appear in `aws_inventory/` in the directory you ran the script from.
 
-### Output
-- All JSON output files are stored in `aws_inventory/`.
-- CloudMapper runs a local web server showing:
-  - VPC topology
-  - Security Groups
-  - EC2, ECS, Lambda, Load Balancer connections
+## Configuration
 
-### Recommendations
-- Use `jq` (Linux/macOS) for robust parsing of JSON outputs.
-- Ensure sufficient disk space for large accounts.
-- Run in a read-only role to prevent accidental changes.
+The scripts are interactive and read no configuration file. They honour the standard AWS CLI environment (`AWS_PROFILE` is set from your answer to the prompt; `AWS_REGION` / `AWS_DEFAULT_REGION` select the region). There is no `.env` file.
 
-## License
-MIT License – free and open source.
+## Project layout
+
+```
+scripts/   collect-aws-inventory.sh / .ps1 collectors, run-collect.bat wrapper
+docs/      project history
+```
+
+## Testing
+
+There is no automated test suite (the scripts need a live AWS account). Syntax checks:
+
+```bash
+bash -n scripts/collect-aws-inventory.sh
+```
+
+```powershell
+$e=$null;$t=$null;[void][System.Management.Automation.Language.Parser]::ParseFile("scripts/collect-aws-inventory.ps1",[ref]$t,[ref]$e); $e.Count
+```
 
 ## Contributing
-Pull requests welcome for:
-- Adding support for additional AWS services.
-- Enhancing visualization features.
-- Multi-region or multi-account inventory collection.
 
-## Contact
-For questions or issues, open an issue in this repository.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)
