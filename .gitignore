@@ -1,9 +1,21 @@
-# AWS Inventory Output
+# AWS inventory output (contains account data - never commit)
 aws_inventory/
 cloudmapper/
 *.json
 *.log
 
-# OS files
+# Secrets and local environment
+secrets/
+.secrets/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tfstate*
+credentials*
+
+# Worktrees and OS junk
+.worktrees/
 .DS_Store
 Thumbs.db
